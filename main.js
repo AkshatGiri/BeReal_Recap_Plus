@@ -1,3 +1,26 @@
+function createSignal(intialValue) {
+  let callbacks = []
+  let value = intialValue
+
+  function set(newValue) {
+    value = newValue
+    callbacks.forEach((callback) => callback(value))
+  }
+
+  function get() {
+    return value
+  }
+
+  function subscribe(callback) {
+    callbacks.push(callback)
+    return function unsubscribe() {
+      callbacks = callbacks.filter((cb) => cb !== callback)
+    }
+  }
+
+  return [get, set, subscribe]
+}
+
 ///////////////////////
 // Setting up Canvas //
 ///////////////////////
@@ -40,15 +63,39 @@ function roundedImage(context, x, y, width, height, radius) {
   context.closePath()
 }
 
-/////////////
-// Drawing //
-/////////////
+///////////
+// Draw ///
+///////////
+function draw({ frame, secondaryImages, primaryImages }) {
+  const FRAMES_PER_IMAGE = 6 // calcaulate frames per image based on fps. We want 6 images per second for example.
+  const imageIndex = Math.floor(frame / FRAMES_PER_IMAGE) % primaryImages.length // eg 20 / 6 = 3.33, Math.floor(3.33) = 3, 3 % 10 = 3
 
-fetchMemoriesData().then(async (memoriesData) => {
-  const first10 = memoriesData.slice(0, 10) // for testing
+  ctx.drawImage(secondaryImages[imageIndex], 0, 0, canvas.width, canvas.height)
+  ctx.save()
+  roundedImage(ctx, 16, 16, canvas.width / 3, canvas.height / 3, 10)
 
-  const images = memoriesData
-  // const images = first10
+  // ctx.beginPath()
+  ctx.strokeStyle = '#000' // some color/style
+  ctx.lineWidth = 8 // thickness
+  ctx.stroke()
+  ctx.clip()
+  ctx.drawImage(
+    primaryImages[imageIndex],
+    16,
+    16,
+    canvas.width / 3,
+    canvas.height / 3,
+  )
+  ctx.restore()
+}
+
+async function main() {
+  const memoriesData = await fetchMemoriesData()
+
+  const first10 = memoriesData.slice(0, 10)
+
+  // const images = memoriesData
+  const images = first10
 
   // Load images in memory
   primaryImages = images.map((memory) => {
@@ -79,55 +126,64 @@ fetchMemoriesData().then(async (memoriesData) => {
     ),
   ])
 
-  // Draw images
-  let frame = 0
-  let imageIndex = 0
-  const FRAMES_PER_IMAGE = 6 // calcaulate frames per image based on fps. We want 6 images per second for example.
-  function draw() {
-    //////////
-    // DRAW //
-    //////////
-
-    ctx.drawImage(
-      secondaryImages[imageIndex],
-      0,
-      0,
-      canvas.width,
-      canvas.height,
-    )
-    ctx.save()
-    roundedImage(ctx, 16, 16, canvas.width / 3, canvas.height / 3, 10)
-
-    // ctx.beginPath()
-    ctx.strokeStyle = '#000' // some color/style
-    ctx.lineWidth = 8 // thickness
-    ctx.stroke()
-    ctx.clip()
-    ctx.drawImage(
-      primaryImages[imageIndex],
-      16,
-      16,
-      canvas.width / 3,
-      canvas.height / 3,
-    )
-    ctx.restore()
-
-    //////////////////////////
-    // SETUP FOR NEXT FRAME //
-    //////////////////////////
-
-    frame++
-    // Set image index based on frame
-    if (frame % FRAMES_PER_IMAGE === 0) {
-      imageIndex++
-    }
-
-    // Loop the images
-    if (imageIndex === primaryImages.length) {
-      imageIndex = 0
-    }
-
-    requestAnimationFrame(draw)
+  const [getFrame, setFrame, onFrameChange] = createSignal(0)
+  const PlayStates = {
+    PLAYING: 'PLAYING',
+    PAUSED: 'PAUSED',
   }
-  draw()
-})
+  const [getPlayState, setPlayState, onPlayState] = createSignal(
+    PlayStates.PLAYING,
+  )
+
+  onFrameChange((f) => {
+    frameInput.value = f
+  })
+
+  const frameInput = document.getElementById('frame-input')
+  frameInput.addEventListener('input', (e) => {
+    const value = parseInt(e.target.value)
+    if (value < 0 || Number.isNaN(value)) return
+    setFrame(parseInt(e.target.value))
+  })
+
+  function togglePlay() {
+    if (getPlayState() === PlayStates.PLAYING) {
+      setPlayState(PlayStates.PAUSED)
+    } else {
+      setPlayState(PlayStates.PLAYING)
+    }
+  }
+
+  document.onkeyup = function (e) {
+    if (e.key == ' ' || e.code == 'Space') {
+      togglePlay()
+    }
+  }
+
+  const playButton = document.getElementById('play-button')
+  playButton.addEventListener('click', () => {
+    togglePlay()
+  })
+
+  onPlayState((state) => {
+    if (state === PlayStates.PLAYING) {
+      playButton.innerHTML = 'Pause'
+    } else {
+      playButton.innerHTML = 'Play'
+    }
+  })
+
+  function step(timestamp) {
+    draw({ frame: getFrame(), primaryImages, secondaryImages })
+    // add play or pause
+    if (getPlayState() === PlayStates.PLAYING) {
+      setFrame(getFrame() + 1)
+    }
+    requestAnimationFrame(step)
+  }
+
+  requestAnimationFrame(step)
+}
+
+// Start the application
+main()
