@@ -24,7 +24,7 @@ function createSignal(intialValue) {
 ///////////////////////
 // Setting up Canvas //
 ///////////////////////
-let canvas = document.getElementById('video-canvas')
+let canvas = document.getElementById('preview-canvas')
 canvas.width = 1500 * 0.3
 canvas.height = 2000 * 0.3
 
@@ -132,18 +132,41 @@ async function main() {
     PAUSED: 'PAUSED',
   }
   const [getPlayState, setPlayState, onPlayState] = createSignal(
-    PlayStates.PLAYING,
+    PlayStates.PAUSED,
   )
 
-  onFrameChange((f) => {
-    frameInput.value = f
+  function syncPlayStateToButton() {
+    const playButton = document.querySelector('.play-btn')
+    const pauseButton = document.querySelector('.pause-btn')
+    if (getPlayState() === PlayStates.PLAYING) {
+      playButton.classList.add('hidden')
+      pauseButton.classList.remove('hidden')
+    } else {
+      playButton.classList.remove('hidden')
+      pauseButton.classList.add('hidden')
+    }
+  }
+
+  console.log('hello')
+  onPlayState(syncPlayStateToButton)
+  syncPlayStateToButton()
+
+  document.querySelector('.play-btn').addEventListener('click', () => {
+    setPlayState(PlayStates.PLAYING)
   })
 
-  const frameInput = document.getElementById('frame-input')
-  frameInput.addEventListener('input', (e) => {
-    const value = parseInt(e.target.value)
-    if (value < 0 || Number.isNaN(value)) return
-    setFrame(parseInt(e.target.value))
+  document.querySelector('.pause-btn').addEventListener('click', () => {
+    setPlayState(PlayStates.PAUSED)
+  })
+
+  document.querySelector('.forward-step-btn').addEventListener('click', () => {
+    setFrame(getFrame() + 1)
+  })
+
+  document.querySelector('.backward-step-btn').addEventListener('click', () => {
+    if (getFrame() > 0) {
+      setFrame(getFrame() + 1)
+    }
   })
 
   function togglePlay() {
@@ -159,19 +182,6 @@ async function main() {
       togglePlay()
     }
   }
-
-  const playButton = document.getElementById('play-button')
-  playButton.addEventListener('click', () => {
-    togglePlay()
-  })
-
-  onPlayState((state) => {
-    if (state === PlayStates.PLAYING) {
-      playButton.innerHTML = 'Pause'
-    } else {
-      playButton.innerHTML = 'Play'
-    }
-  })
 
   function step(timestamp) {
     draw({ frame: getFrame(), primaryImages, secondaryImages })

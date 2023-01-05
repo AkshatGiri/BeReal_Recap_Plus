@@ -7,13 +7,35 @@
     <title>BeReal Videos</title>
 
     <link rel="stylesheet" href="main.css" />
+    <script
+      src="https://kit.fontawesome.com/e0ae681032.js"
+      crossorigin="anonymous"
+    ></script>
   </head>
   <body>
-    <div class="canvas-container">
-      <canvas id="video-canvas" class="center"></canvas>
-      <input type="number" value="0" id="frame-input" min="0" />
-      <button id="play-button">Pause</button>
-    </div>
+    <main class="app-container">
+      <nav class="navigation gb-2"></nav>
+
+      <div class="editor-container">
+        <div class="panels-container">
+          <div class="options-panel gb-5"></div>
+          <div class="preview-container gb-3">
+            <div>
+              <canvas id="preview-canvas"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="controls gb-4">
+          <div class="controls__actions-container gb-1">
+            <i class="backward-step-btn icon-btn fa-solid fa-backward-step"></i>
+            <i class="play-btn icon-btn fa-solid fa-play"></i>
+            <i class="pause-btn icon-btn fa-solid fa-pause hidden"></i>
+            <i class="forward-step-btn icon-btn fa-solid fa-forward-step"></i>
+          </div>
+        </div>
+      </div>
+    </main>
   </body>
   <script src="main.js"></script>
 </html>
